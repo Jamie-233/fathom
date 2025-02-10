@@ -1,0 +1,29 @@
+# A small campus: two cores, a distribution pair, four access switches and a
+# WAN edge. Mixed vendors on purpose — every layer of the platform has to
+# handle Cisco IOS and Huawei VRP output side by side.
+site: hq
+devices:
+  - { name: edge-01, vendor: cisco_ios, role: edge, mgmt: 10.0.0.1, model: ISR4331 }
+  - { name: core-01, vendor: huawei_vrp, role: core, mgmt: 10.0.0.2, model: S6730 }
+  - { name: core-02, vendor: huawei_vrp, role: core, mgmt: 10.0.0.3, model: S6730 }
+  - { name: dist-01, vendor: cisco_ios, role: distribution, mgmt: 10.0.0.11, model: C9500 }
+  - { name: dist-02, vendor: cisco_ios, role: distribution, mgmt: 10.0.0.12, model: C9500 }
+  - { name: acc-01, vendor: cisco_ios, role: access, mgmt: 10.0.1.1, model: C9200 }
+  - { name: acc-02, vendor: cisco_ios, role: access, mgmt: 10.0.1.2, model: C9200 }
+  - { name: acc-03, vendor: huawei_vrp, role: access, mgmt: 10.0.1.3, model: S5735 }
+  - { name: acc-04, vendor: huawei_vrp, role: access, mgmt: 10.0.1.4, model: S5735 }
+
+links:
+  - [edge-01, Gi0/0/1, core-01, GE1/0/1]
+  - [edge-01, Gi0/0/2, core-02, GE1/0/1]
+  - [core-01, GE1/0/2, core-02, GE1/0/2]
+  - [core-01, GE1/0/3, dist-01, Te1/0/1]
+  - [core-02, GE1/0/3, dist-02, Te1/0/1]
+  - [dist-01, Te1/0/2, dist-02, Te1/0/2]
+  - [dist-01, Gi1/0/1, acc-01, Gi1/0/48]
+  - [dist-01, Gi1/0/2, acc-02, Gi1/0/48]
+  - [dist-02, Gi1/0/1, acc-03, GE0/0/48]
+  - [dist-02, Gi1/0/2, acc-04, GE0/0/48]
+
+# Edge ports facing users, so access switches carry realistic load.
+access_ports: 6
