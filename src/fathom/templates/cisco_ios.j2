@@ -1,0 +1,11 @@
+{# One interface stanza per port, however many fields change on it. #}
+{% for iface, items in changes | groupby('interface') %}
+interface {{ iface }}
+{% for ch in items %}
+{% if ch.field == 'description' %}
+ {{ ('description ' ~ ch.after) if ch.after else 'no description' }}
+{% elif ch.field == 'enabled' %}
+ {{ 'no shutdown' if ch.after else 'shutdown' }}
+{% endif %}
+{% endfor %}
+{% endfor %}
