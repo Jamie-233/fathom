@@ -1,0 +1,11 @@
+# Desired state for user-facing ports. Only what is declared here is managed.
+devices:
+  acc-01:
+    interfaces:
+      Gi1/0/1: { description: "reception-pc", enabled: true }
+      Gi1/0/2: { description: "printer-floor1", enabled: true }
+      Gi1/0/6: { description: "unused", enabled: false }
+  acc-03:
+    interfaces:
+      GE0/0/1: { description: "meeting-room-a", enabled: true }
+      GE0/0/6: { description: "unused", enabled: false }
