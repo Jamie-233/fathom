@@ -63,12 +63,20 @@ def test_cpu_uptime_lldp(lab):
 
 def test_syslog_both_vendors(lab):
     lab.fail_link("dist-02", "Gi1/0/1")
+    lab.fail_link("core-01", "GE1/0/2")
     ios = [parse_syslog("dist-02", line) for line in lab.drain_syslog("dist-02")]
-    vrp = [parse_syslog("acc-03", line) for line in lab.drain_syslog("acc-03")]
+    vrp = [parse_syslog("core-01", line) for line in lab.drain_syslog("core-01")]
     link = next(e for e in ios if e.facility == "LINK")
     assert (link.interface, link.state, link.kind) == ("Gi1/0/1", "down", "link_state")
     assert any(e.facility == "LINEPROTO" and e.state is None for e in ios)
-    assert (vrp[0].interface, vrp[0].state, vrp[0].severity) == ("GE0/0/48", "down", 2)
+    assert (vrp[0].interface, vrp[0].state, vrp[0].severity) == ("GE1/0/2", "down", 2)
+
+
+def test_isolated_device_buffers_syslog_until_path_returns(lab):
+    lab.fail_link("dist-02", "Gi1/0/1")
+    assert lab.drain_syslog("acc-03") == []
+    lab.restore_link("dist-02", "Gi1/0/1")
+    assert any("GE0/0/48" in line for line in lab.drain_syslog("acc-03"))
 
 
 def test_unparseable_log_is_ignored():

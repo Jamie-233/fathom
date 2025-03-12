@@ -68,6 +68,13 @@ class DeviceUnreachable(ConnectionError):
     pass
 
 
+# The poller sits behind the core, so management reachability is a graph
+# question, not a power question: an access switch with a cut uplink is
+# alive and forwarding locally, yet the platform cannot see it at all. That
+# is exactly why "device unreachable" alone can't name a root cause.
+MGMT_ANCHORS = ("core-01", "core-02")
+
+
 class Lab:
     def __init__(self, topology: str | Path = DEFAULT_TOPOLOGY, seed: int | None = 7):
         spec = yaml.safe_load(Path(topology).read_text(encoding="utf-8"))
@@ -194,6 +201,36 @@ class Lab:
                         self._set_link(*i.peer, True)
                 self._log(d, "SYS", 5, "RESTART", "System restarted")
 
+    def err_disable(self, dev: str, ifname: str) -> None:
+        """What BPDU guard does when someone plugs a switch into a user port."""
+        with self.lock:
+            d = self.devices[dev]
+            i = d.interfaces[ifname]
+            i.err_disabled = True
+            if d.vendor == "cisco_ios":
+                self._log(d, "PM", 4, "ERR_DISABLE", f"bpduguard error detected on {ifname}, putting {ifname} in err-disable state")
+            else:
+                self._log(d, "MSTP", 4, "BPDU_PROTECTION", f"This edged-port {ifname} that enabled BPDU-Protection will be shutdown, because it received BPDU packet!")
+            self._set_link(dev, ifname, i.link_up)
+
+    def reachable(self, dev: str) -> bool:
+        with self.lock:
+            if not self.devices[dev].powered:
+                return False
+            seen = {a for a in MGMT_ANCHORS if a in self.devices and self.devices[a].powered}
+            stack = list(seen)
+            while stack:
+                cur = stack.pop()
+                if cur == dev:
+                    return True
+                for i in self.devices[cur].interfaces.values():
+                    if i.peer and i.oper_up and i.peer[0] not in seen:
+                        peer_dev = self.devices[i.peer[0]]
+                        if peer_dev.powered and peer_dev.interfaces[i.peer[1]].oper_up:
+                            seen.add(i.peer[0])
+                            stack.append(i.peer[0])
+            return dev in seen
+
     def heal(self) -> None:
         with self.lock:
             for d in self.devices.values():
@@ -210,6 +247,10 @@ class Lab:
     def drain_syslog(self, dev: str) -> list[str]:
         with self.lock:
             d = self.devices[dev]
+            # Syslog travels the same network: an isolated device's messages
+            # stay buffered on the box until the path comes back.
+            if not self.reachable(dev):
+                return []
             out, d.syslog = d.syslog, []
             return out
 
@@ -220,7 +261,7 @@ class Lab:
             d = self.devices.get(dev)
             if d is None:
                 raise KeyError(dev)
-            if not d.powered:
+            if not self.reachable(dev):
                 raise DeviceUnreachable(f"{dev} ({d.mgmt}) did not respond")
             return render.command(self, d, command.strip())
 
@@ -228,7 +269,7 @@ class Lab:
         """Apply configuration lines with IOS/VRP-style context handling."""
         with self.lock:
             d = self.devices[dev]
-            if not d.powered:
+            if not self.reachable(dev):
                 raise DeviceUnreachable(f"{dev} ({d.mgmt}) did not respond")
             current: SimInterface | None = None
             applied = []

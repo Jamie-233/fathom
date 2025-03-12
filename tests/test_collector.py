@@ -76,9 +76,11 @@ def test_link_failure_produces_state_and_log_events(env):
     col.poll_all()
     lab.fail_link("dist-01", "Gi1/0/2")
     step(lab, clock, col)
-    assert store.row("SELECT oper_up FROM interfaces WHERE device='acc-02' AND name='Gi1/0/48'")["oper_up"] == 0
+    assert store.row("SELECT oper_up FROM interfaces WHERE device='dist-01' AND name='Gi1/0/2'")["oper_up"] == 0
     ev = store.rows("SELECT device, interface, state FROM events WHERE kind='link_state'")
-    assert {"device": "acc-02", "interface": "Gi1/0/48", "state": "down"} in ev
+    assert {"device": "dist-01", "interface": "Gi1/0/2", "state": "down"} in ev
+    # The far end is cut off from the poller, so it is unreachable, not "down".
+    assert store.row("SELECT reachable FROM devices WHERE name='acc-02'")["reachable"] == 0
 
 
 def test_lldp_discovery_finds_every_link(env):
