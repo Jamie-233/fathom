@@ -43,8 +43,8 @@ CREATE TABLE IF NOT EXISTS alerts (
 );
 CREATE INDEX IF NOT EXISTS alerts_open ON alerts (status, fingerprint);
 CREATE TABLE IF NOT EXISTS incidents (
-    id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT, root_device TEXT, root_target TEXT,
-    status TEXT, opened REAL, closed REAL, impact TEXT
+    id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT, root_key TEXT, root_device TEXT, root_target TEXT,
+    kind TEXT, confidence TEXT, status TEXT, opened REAL, closed REAL, impact TEXT
 );
 CREATE TABLE IF NOT EXISTS jobs (
     id INTEGER PRIMARY KEY AUTOINCREMENT, kind TEXT, title TEXT, device TEXT, target TEXT,
