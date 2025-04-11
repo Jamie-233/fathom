@@ -68,6 +68,20 @@ RUNBOOKS = [
         # outage; infrastructure links get an incident and a human instead.
         applies=_is_user_port,
     ),
+    # Manual actions: never triggered by an alert, only proposed by a person
+    # or the agent, and always behind approval.
+    Runbook(
+        "port_disable", "", "medium",
+        title=lambda a: f"Disable {a['device']} {a['target']}",
+        commands=lambda v, a: [f"interface {a['target']}", "shutdown"],
+        verify=lambda st: not st["admin_up"],
+    ),
+    Runbook(
+        "port_enable", "", "medium",
+        title=lambda a: f"Enable {a['device']} {a['target']}",
+        commands=lambda v, a: [f"interface {a['target']}", _no_shut(v)],
+        verify=lambda st: st["admin_up"],
+    ),
     Runbook(
         "collect_cpu_diagnostics", "high_cpu", "read-only",
         title=lambda a: f"Collect CPU diagnostics from {a['device']}",
@@ -82,7 +96,9 @@ class Remediator:
         self.store = store
         self.transport = transport
         self.clock = clock
-        self.runbooks = {r.rule: r for r in (runbooks or RUNBOOKS)}
+        books = runbooks or RUNBOOKS
+        self.runbooks = {r.rule: r for r in books if r.rule}
+        self.by_name = {r.name: r for r in books}
 
     def on_alerts(self, alert_ids: list[int]) -> list[int]:
         created = []
@@ -108,6 +124,25 @@ class Remediator:
             self.store.audit("fathom", "job.created", a["device"], {"job": cur.lastrowid, "status": status})
         return created
 
+    def propose(self, kind: str, device: str, target: str, reason: str, actor: str) -> int:
+        """Queue a manual action. It always waits for approval, whoever asks."""
+        rb = self.by_name[kind]
+        dev = self.store.row("SELECT vendor FROM devices WHERE name=?", (device,))
+        if not dev:
+            raise KeyError(f"unknown device {device}")
+        if not self.store.row("SELECT 1 FROM interfaces WHERE device=? AND name=?", (device, target)):
+            raise KeyError(f"unknown interface {device} {target}")
+        if self.store.row("SELECT 1 FROM links WHERE a=? AND a_if=?", (device, target)) and kind == "port_disable":
+            raise ValueError(f"{device} {target} is an infrastructure link; refusing to queue a shutdown")
+        ctx = {"device": device, "target": target, "summary": reason}
+        plan = {"commands": rb.commands(dev["vendor"], ctx), "risk": rb.risk, "reason": reason}
+        cur = self.store.execute(
+            "INSERT INTO jobs (kind, title, device, target, status, created, requested_by, plan) "
+            "VALUES (?,?,?,?, 'pending_approval', ?,?,?)",
+            (kind, rb.title(ctx), device, target, self.clock(), actor, json.dumps(plan)))
+        self.store.audit(actor, "job.proposed", device, {"job": cur.lastrowid, "reason": reason})
+        return cur.lastrowid
+
     def approve(self, job_id: int, actor: str) -> dict:
         return self._decide(job_id, actor, "approved")
 
@@ -120,6 +155,9 @@ class Remediator:
             raise KeyError(job_id)
         if job["status"] != "pending_approval":
             raise ValueError(f"job {job_id} is {job['status']}, not awaiting approval")
+        if status == "approved" and actor == job["requested_by"]:
+            # Four-eyes: whoever asked for a change cannot also approve it.
+            raise PermissionError(f"{actor} requested job {job_id} and cannot approve it")
         self.store.execute("UPDATE jobs SET status=?, approved_by=? WHERE id=?", (status, actor, job_id))
         self.store.audit(actor, f"job.{status}", job["device"], {"job": job_id})
         return self.store.row("SELECT * FROM jobs WHERE id=?", (job_id,))
@@ -138,7 +176,7 @@ class Remediator:
         return None if st is None else {"oper_up": st.oper_up, "admin_up": st.admin_up}
 
     def _run(self, job: dict) -> None:
-        rb = next(r for r in self.runbooks.values() if r.name == job["kind"])
+        rb = self.by_name[job["kind"]]
         plan = json.loads(job["plan"])
         vendor = self.store.row("SELECT vendor FROM devices WHERE name=?", (job["device"],))["vendor"]
         self.store.execute("UPDATE jobs SET status='running' WHERE id=?", (job["id"],))

@@ -99,3 +99,19 @@ def test_unreachable_device_fails_the_job_cleanly(env, parts):
     rem.run_approved()
     job = env.store.row("SELECT * FROM jobs WHERE id=?", (jid,))
     assert job["status"] == "failed" and "DeviceUnreachable" in job["output"]
+
+
+def test_manual_proposal_needs_a_different_approver(env, parts):
+    _, rem = parts
+    jid = rem.propose("port_disable", "acc-01", "Gi1/0/2", "user reports looped cable", actor="carol")
+    with pytest.raises(PermissionError):
+        rem.approve(jid, "carol")
+    rem.approve(jid, "dave")
+    rem.run_approved()
+    assert not env.lab.devices["acc-01"].interfaces["Gi1/0/2"].admin_up
+
+
+def test_proposing_to_shut_an_uplink_is_refused(env, parts):
+    _, rem = parts
+    with pytest.raises(ValueError, match="infrastructure link"):
+        rem.propose("port_disable", "dist-01", "Gi1/0/1", "test", actor="agent")
