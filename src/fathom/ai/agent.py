@@ -26,9 +26,9 @@ from typing import Any, Callable
 
 import httpx
 
-from .collector import COMMANDS
-from .lab import DeviceUnreachable
-from .platform import Platform
+from fathom.observe.collector import COMMANDS
+from fathom.devices.lab import DeviceUnreachable
+from fathom.platform import Platform
 
 SYSTEM = """You are Fathom's network operations assistant for a campus network.
 Ground every statement in tool results; cite device and interface names.

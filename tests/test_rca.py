@@ -1,5 +1,5 @@
-from fathom.rca import IncidentManager, analyze
-from fathom.rules import RuleEngine
+from fathom.ai.rca import IncidentManager, analyze
+from fathom.observe.rules import RuleEngine
 
 
 def run(env, cycles=1):

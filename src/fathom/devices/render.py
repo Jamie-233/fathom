@@ -13,7 +13,7 @@ import zlib
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from .lab import Lab, SimDevice, SimInterface
+    from fathom.devices.lab import Lab, SimDevice, SimInterface
 
 
 def _ios_state(i: "SimInterface") -> tuple[str, str]:

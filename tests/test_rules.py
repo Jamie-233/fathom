@@ -1,4 +1,4 @@
-from fathom.rules import RuleEngine
+from fathom.observe.rules import RuleEngine
 
 
 def firing(store):

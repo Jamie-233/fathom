@@ -19,13 +19,14 @@ from pathlib import Path
 
 import httpx
 
-from .collector import Collector
-from .knowledge import KnowledgeBase
-from .lab import DEFAULT_TOPOLOGY, Lab, LabTransport
-from .rca import IncidentManager
-from .remediation import Remediator
-from .rules import RuleEngine
-from .store import Store
+from fathom.observe.collector import Collector
+from fathom.ai.knowledge import KnowledgeBase
+from fathom.devices.lab import DEFAULT_TOPOLOGY, Lab
+from fathom.devices.transport import LabTransport
+from fathom.ai.rca import IncidentManager
+from fathom.ops.remediation import Remediator
+from fathom.observe.rules import RuleEngine
+from fathom.data.store import Store
 
 log = logging.getLogger("fathom")
 

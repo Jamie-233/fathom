@@ -29,12 +29,12 @@ from pathlib import Path
 import yaml
 from jinja2 import Environment, FileSystemLoader, StrictUndefined
 
-from .collector import COMMANDS
-from .lab import DeviceUnreachable
-from .parsers import parse_ios_interfaces, parse_vrp_brief
-from .store import Store
+from fathom.observe.collector import COMMANDS
+from fathom.devices.lab import DeviceUnreachable
+from fathom.data.parsers import parse_ios_interfaces, parse_vrp_brief
+from fathom.data.store import Store
 
-TEMPLATES = Path(__file__).parent / "templates"
+TEMPLATES = Path(__file__).parent.parent / "config" / "templates"
 _env = Environment(loader=FileSystemLoader(TEMPLATES), undefined=StrictUndefined, trim_blocks=True, lstrip_blocks=True)
 
 

@@ -1,4 +1,4 @@
-from fathom.knowledge import KnowledgeBase, tokenize
+from fathom.ai.knowledge import KnowledgeBase, tokenize
 
 
 def test_tokenizer_keeps_ops_tokens_and_handles_cjk():

@@ -3,7 +3,7 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
-from fathom.api import create_app
+from fathom.api.app import create_app
 from fathom.platform import Platform
 
 DESIRED = (Path(__file__).parent.parent / "examples" / "desired.yml").read_text()

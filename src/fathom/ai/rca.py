@@ -30,7 +30,7 @@ import time
 from collections import deque
 from dataclasses import dataclass, field
 
-from .store import Store
+from fathom.data.store import Store
 
 
 @dataclass

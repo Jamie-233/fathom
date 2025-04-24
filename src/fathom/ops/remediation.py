@@ -26,10 +26,10 @@ import time
 from dataclasses import dataclass
 from typing import Callable
 
-from .collector import COMMANDS
-from .lab import DeviceUnreachable
-from .parsers import parse_ios_interfaces, parse_vrp_brief
-from .store import Store
+from fathom.observe.collector import COMMANDS
+from fathom.devices.lab import DeviceUnreachable
+from fathom.data.parsers import parse_ios_interfaces, parse_vrp_brief
+from fathom.data.store import Store
 
 
 @dataclass

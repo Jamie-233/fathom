@@ -1,7 +1,7 @@
 import pytest
 
-from fathom.lab import Lab
-from fathom.parsers import (ParseError, canonical_ifname, parse_cpu, parse_ios_interfaces, parse_lldp,
+from fathom.devices.lab import Lab
+from fathom.data.parsers import (ParseError, canonical_ifname, parse_cpu, parse_ios_interfaces, parse_lldp,
                             parse_syslog, parse_uptime_seconds, parse_vrp_brief)
 
 

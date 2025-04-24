@@ -24,11 +24,11 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
-from . import iac
-from .agent import Agent
-from .platform import Platform
+from fathom.delivery import iac
+from fathom.ai.agent import Agent
+from fathom.platform import Platform
 
-STATIC = Path(__file__).parent / "static"
+STATIC = Path(__file__).parent.parent / "ops" / "static"
 PLAN_TTL = 900
 
 

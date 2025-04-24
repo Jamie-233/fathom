@@ -255,7 +255,7 @@ class Lab:
             return out
 
     def execute(self, dev: str, command: str) -> str:
-        from . import render  # local import: rendering is presentation, not simulation
+        from fathom.devices import render  # local import: rendering is presentation, not simulation
 
         with self.lock:
             d = self.devices.get(dev)
@@ -300,19 +300,3 @@ class Lab:
                     raise ValueError(f"{dev}: unsupported command in lab: {line!r}")
                 applied.append(line)
             return "\n".join(applied)
-
-
-class LabTransport:
-    """The only object the platform uses to reach devices."""
-
-    def __init__(self, lab: Lab):
-        self.lab = lab
-
-    def run(self, device: str, command: str) -> str:
-        return self.lab.execute(device, command)
-
-    def configure(self, device: str, lines: list[str]) -> str:
-        return self.lab.configure(device, lines)
-
-    def syslog(self, device: str) -> list[str]:
-        return self.lab.drain_syslog(device)

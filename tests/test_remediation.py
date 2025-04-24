@@ -2,8 +2,8 @@ import json
 
 import pytest
 
-from fathom.remediation import Remediator
-from fathom.rules import RuleEngine
+from fathom.ops.remediation import Remediator
+from fathom.observe.rules import RuleEngine
 
 
 def cycle(env, eng, rem):

@@ -18,10 +18,10 @@ from __future__ import annotations
 import time
 from dataclasses import dataclass, field
 
-from .lab import DeviceUnreachable
-from .parsers import InterfaceStat, LogEvent, parse_cpu, parse_ios_interfaces, parse_lldp, \
+from fathom.devices.lab import DeviceUnreachable
+from fathom.data.parsers import InterfaceStat, LogEvent, parse_cpu, parse_ios_interfaces, parse_lldp, \
     parse_syslog, parse_uptime_seconds, parse_vrp_brief
-from .store import Store
+from fathom.data.store import Store
 
 COUNTER_MAX = 2**64
 

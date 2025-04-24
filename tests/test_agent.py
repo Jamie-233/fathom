@@ -4,7 +4,7 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 
 import pytest
 
-from fathom.agent import Agent
+from fathom.ai.agent import Agent
 from fathom.platform import Platform
 
 

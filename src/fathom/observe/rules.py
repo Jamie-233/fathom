@@ -21,7 +21,7 @@ import time
 from dataclasses import dataclass
 from typing import Callable
 
-from .store import Store
+from fathom.data.store import Store
 
 
 @dataclass(frozen=True)

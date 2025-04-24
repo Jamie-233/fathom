@@ -28,7 +28,7 @@ fathom = "fathom.cli:main"
 where = ["src"]
 
 [tool.setuptools.package-data]
-fathom = ["static/*", "templates/*", "knowledge/*", "lab.yml"]
+fathom = ["ops/static/*", "config/templates/*", "ai/knowledge/*", "devices/lab.yml"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

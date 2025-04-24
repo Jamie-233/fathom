@@ -1,8 +1,9 @@
 import pytest
 
-from fathom.collector import Collector, counter_delta
-from fathom.lab import Lab, LabTransport
-from fathom.store import Store
+from fathom.observe.collector import Collector, counter_delta
+from fathom.devices.lab import Lab
+from fathom.devices.transport import LabTransport
+from fathom.data.store import Store
 
 
 def test_counter_delta_handles_wrap_and_reset():

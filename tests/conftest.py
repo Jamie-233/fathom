@@ -1,8 +1,9 @@
 import pytest
 
-from fathom.collector import Collector
-from fathom.lab import Lab, LabTransport
-from fathom.store import Store
+from fathom.observe.collector import Collector
+from fathom.devices.lab import Lab
+from fathom.devices.transport import LabTransport
+from fathom.data.store import Store
 
 
 class Clock:
