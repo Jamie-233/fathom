@@ -51,6 +51,10 @@ CREATE TABLE IF NOT EXISTS jobs (
     status TEXT, created REAL, finished REAL, requested_by TEXT, approved_by TEXT,
     plan TEXT, output TEXT, alert_id INTEGER
 );
+CREATE TABLE IF NOT EXISTS config_backups (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, device TEXT, ts REAL, sha TEXT, config TEXT
+);
+CREATE INDEX IF NOT EXISTS backups_device ON config_backups (device, ts);
 CREATE TABLE IF NOT EXISTS audit (
     ts REAL, actor TEXT, action TEXT, device TEXT, detail TEXT
 );
