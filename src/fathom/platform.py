@@ -20,6 +20,7 @@ from pathlib import Path
 import httpx
 
 from fathom.observe.collector import Collector
+from fathom.observe.metrics import alertmanager_payload
 from fathom.ai.knowledge import KnowledgeBase
 from fathom.devices.lab import DEFAULT_TOPOLOGY, Lab
 from fathom.devices.transport import LabTransport
@@ -33,7 +34,7 @@ log = logging.getLogger("fathom")
 
 class Platform:
     def __init__(self, db: str = ":memory:", topology: str | Path = DEFAULT_TOPOLOGY,
-                 webhooks: list[str] | None = None, seed: int | None = 7, sim_seconds: float = 30.0):
+                 webhooks: list[str | dict] | None = None, seed: int | None = 7, sim_seconds: float = 30.0):
         self.lab = Lab(topology, seed=seed)
         self.store = Store(db)
         self.transport = LabTransport(self.lab)
@@ -46,7 +47,8 @@ class Platform:
         self.incidents = IncidentManager(self.store, clock=clock)
         self.remediator = Remediator(self.store, self.transport, clock=clock)
         self.kb = KnowledgeBase()
-        self.webhooks = webhooks or []
+        # A webhook is a URL (simple JSON) or {"url": ..., "format": "alertmanager"}.
+        self.webhooks = [w if isinstance(w, dict) else {"url": w, "format": "simple"} for w in (webhooks or [])]
         self._notify_pool = ThreadPoolExecutor(max_workers=2)
         self._stop = threading.Event()
         self._thread: threading.Thread | None = None
@@ -79,10 +81,12 @@ class Platform:
         if not self.webhooks:
             return
         inc = self.store.row("SELECT * FROM incidents WHERE id=?", (incident_id,))
-        payload = {"event": event, "incident": inc,
-                   "text": f"[{event}] #{incident_id} {inc['title']}"}
+        simple = {"event": event, "incident": inc, "text": f"[{event}] #{incident_id} {inc['title']}"}
+        am = alertmanager_payload(self.store, incident_id, "firing" if event == "incident.opened" else "resolved")
 
-        def send(url: str) -> None:
+        def send(hook: dict) -> None:
+            url = hook["url"]
+            payload = am if hook.get("format") == "alertmanager" else simple
             # Off the cycle thread: a slow chat webhook must never delay polling.
             try:
                 httpx.post(url, json=payload, timeout=5).raise_for_status()
@@ -90,8 +94,8 @@ class Platform:
                 log.warning("webhook %s failed: %s", url, exc)
                 self.store.audit("fathom", "webhook.failed", "", {"url": url, "error": str(exc)})
 
-        for url in self.webhooks:
-            self._notify_pool.submit(send, url)
+        for hook in self.webhooks:
+            self._notify_pool.submit(send, hook)
 
     def start(self, interval: float = 2.0) -> None:
         def loop():

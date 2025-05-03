@@ -20,12 +20,13 @@ from pathlib import Path
 
 import yaml
 from fastapi import Depends, FastAPI, Header, HTTPException, Query
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from fathom.delivery import iac
 from fathom.ai.agent import Agent
+from fathom.observe.metrics import exposition
 from fathom.platform import Platform
 
 STATIC = Path(__file__).parent.parent / "ops" / "static"
@@ -251,6 +252,10 @@ def create_app(platform: Platform | None = None, token: str | None = None) -> Fa
     @app.get("/api/audit")
     def audit(limit: int = Query(50, ge=1, le=500)):
         return s.rows("SELECT * FROM audit ORDER BY ts DESC LIMIT ?", (limit,))
+
+    @app.get("/metrics", include_in_schema=False)
+    def prometheus():
+        return PlainTextResponse(exposition(s), media_type="text/plain; version=0.0.4")
 
     @app.get("/healthz")
     def health():
