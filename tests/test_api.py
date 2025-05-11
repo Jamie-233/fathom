@@ -60,6 +60,7 @@ def test_plan_then_apply_by_id_only_once(client):
     assert plan["change_count"] == 7
     res = client.post("/api/iac/apply", json={"plan_id": plan["plan_id"]}, headers=auth()).json()
     assert all(r["ok"] for r in res["results"])
+    assert res["regressions"] == [] and len(res["verification"]) == 4
     assert client.post("/api/iac/apply", json={"plan_id": plan["plan_id"]}, headers=auth()).status_code == 410
     again = client.post("/api/iac/plan", json={"yaml": DESIRED}, headers=auth()).json()
     assert again["change_count"] == 0
@@ -82,3 +83,7 @@ def test_metrics_and_portal(client):
     pts = client.get("/api/metrics", params={"device": "acc-01", "metric": "util", "target": "Gi1/0/48"}).json()
     assert pts and pts[-1]["value"] > 0
     assert "Fathom" in client.get("/").text
+
+
+def test_verify_endpoint(client):
+    assert all(c["passed"] for c in client.get("/api/verify").json())

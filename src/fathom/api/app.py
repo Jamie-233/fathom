@@ -26,6 +26,7 @@ from pydantic import BaseModel, Field
 
 from fathom.delivery import iac
 from fathom.ai.agent import Agent
+from fathom.observe import verify
 from fathom.observe.metrics import exposition
 from fathom.platform import Platform
 
@@ -205,7 +206,18 @@ def create_app(platform: Platform | None = None, token: str | None = None) -> Fa
         if entry is None or time.time() - entry[0] > PLAN_TTL:
             raise HTTPException(410, "plan not found or expired; run plan again")
         with p.lock:
-            return {"results": iac.apply(s, p.transport, entry[1], actor=who.name)}
+            before = verify.snapshot(s, p.transport)
+            results = iac.apply(s, p.transport, entry[1], actor=who.name)
+            regressions = verify.compare(before, verify.snapshot(s, p.transport))
+        failed = [c.name for c in regressions if not c.passed]
+        if failed:
+            s.audit(who.name, "config.regression", "", {"plan_id": body.plan_id, "failed": failed})
+        return {"results": results, "verification": [c.__dict__ for c in regressions], "regressions": failed}
+
+    @app.get("/api/verify")
+    def verify_now():
+        with p.lock:
+            return [c.__dict__ for c in verify.checks(verify.snapshot(s, p.transport))]
 
     @app.get("/api/kb/search")
     def kb_search(q: str = Query(min_length=1)):
