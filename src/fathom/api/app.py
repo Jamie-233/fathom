@@ -26,6 +26,7 @@ from pydantic import BaseModel, Field
 
 from fathom.delivery import iac
 from fathom.ai.agent import Agent
+from fathom.api.webhooks import netbox_router
 from fathom.observe import verify
 from fathom.observe.metrics import exposition
 from fathom.platform import Platform
@@ -63,7 +64,8 @@ class AskIn(BaseModel):
     question: str = Field(min_length=1, max_length=2000)
 
 
-def create_app(platform: Platform | None = None, token: str | None = None) -> FastAPI:
+def create_app(platform: Platform | None = None, token: str | None = None,
+               netbox_secret: str | None = None) -> FastAPI:
     p = platform or Platform()
     s = p.store
     token = token if token is not None else os.environ.get("FATHOM_TOKEN", "")
@@ -277,6 +279,7 @@ def create_app(platform: Platform | None = None, token: str | None = None) -> Fa
     def index():
         return FileResponse(STATIC / "index.html")
 
+    app.include_router(netbox_router(p, netbox_secret))
     app.mount("/static", StaticFiles(directory=STATIC), name="static")
     app.state.platform = p
     return app
