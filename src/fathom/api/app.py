@@ -20,13 +20,15 @@ from pathlib import Path
 
 import yaml
 from fastapi import Depends, FastAPI, Header, HTTPException, Query
-from fastapi.responses import FileResponse, PlainTextResponse
+from fastapi.responses import FileResponse, HTMLResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from fathom.delivery import iac
 from fathom.ai.agent import Agent
 from fathom.api.webhooks import netbox_router
+from fathom.config import backup
+from fathom.ops import report
 from fathom.observe import verify
 from fathom.observe.metrics import exposition
 from fathom.platform import Platform
@@ -220,6 +222,32 @@ def create_app(platform: Platform | None = None, token: str | None = None,
     def verify_now():
         with p.lock:
             return [c.__dict__ for c in verify.checks(verify.snapshot(s, p.transport))]
+
+    @app.get("/api/report", include_in_schema=True)
+    def inspection_report(format: str = Query("md", pattern="^(md|html)$")):
+        with p.lock:
+            md = report.build(s, p.transport, now=p.lab.clock)
+        if format == "html":
+            return HTMLResponse(report.to_html(md))
+        return PlainTextResponse(md, media_type="text/markdown; charset=utf-8")
+
+    @app.post("/api/backups")
+    def run_backup(who: Actor = Depends(writer)):
+        with p.lock:
+            result = backup.backup_all(s, p.transport, clock=lambda: p.lab.clock)
+        s.audit(who.name, "config.backup", "", result)
+        return result
+
+    @app.get("/api/backups/{device}")
+    def backup_history(device: str):
+        return backup.history(s, device)
+
+    @app.get("/api/backups/diff/{old_id}/{new_id}")
+    def backup_diff(old_id: int, new_id: int):
+        try:
+            return PlainTextResponse(backup.diff(s, old_id, new_id))
+        except KeyError:
+            raise HTTPException(404, "backup not found")
 
     @app.get("/api/kb/search")
     def kb_search(q: str = Query(min_length=1)):
