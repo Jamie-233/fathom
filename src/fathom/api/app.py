@@ -108,6 +108,14 @@ def create_app(platform: Platform | None = None, token: str | None = None,
         d["events"] = s.rows("SELECT * FROM events WHERE device=? ORDER BY ts DESC LIMIT 20", (name,))
         return d
 
+    @app.get("/api/devices/{name}/show")
+    def show(name: str, command: str):
+        # Same allow-list the agent uses: read-only commands only.
+        res = agent.call("show_command", {"device": name, "command": command})
+        if "error" in res:
+            raise HTTPException(404 if res["error"].startswith("unknown") else 400, res["error"])
+        return res
+
     @app.get("/api/topology")
     def topology():
         nodes = s.rows("SELECT name, role, vendor, reachable FROM devices")
