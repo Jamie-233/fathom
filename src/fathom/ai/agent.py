@@ -248,8 +248,12 @@ def explain_incident(agent: Agent, incident_id: int) -> Answer:
     if detail["jobs"]:
         lines.append("Remediation: " + ", ".join(f"job #{j['id']} {j['kind']} ({j['status']})" for j in detail["jobs"]) + ".")
     if hits:
-        best = next((h for h in hits if h["section"] in ("Resolution", "Diagnosis")), hits[0])
-        lines += ["", f"From runbook *{best['runbook']}* — {best['section']}:", best["text"]]
+        # Use the best-matching runbook, but quote its Diagnosis and
+        # Resolution: the symptoms section only repeats what the alert said.
+        doc = next(sec for sec in agent.p.kb.sections if sec.title == hits[0]["runbook"]).doc
+        for sec in agent.p.kb.sections:
+            if sec.doc == doc and sec.heading in ("Diagnosis", "Resolution"):
+                lines += ["", f"**{sec.title} — {sec.heading}**", sec.text]
     return Answer("\n".join(lines), [Step("get_incident", {"incident_id": incident_id}, detail),
                                      Step("search_runbooks", {"query": query}, hits)], mode="offline")
 

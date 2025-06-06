@@ -21,7 +21,7 @@ def test_offline_explains_the_open_incident_with_runbook(platform):
     ans = Agent(platform).ask("what's broken?")
     assert ans.mode == "offline"
     assert "dist-01 is down" in ans.text and "acc-01" in ans.text
-    assert "runbook" in ans.text
+    assert "Device unreachable — Resolution" in ans.text
 
 
 def test_offline_with_no_incidents(platform):
