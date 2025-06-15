@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 from dataclasses import dataclass, field
 from typing import Any, Callable
 
@@ -58,7 +59,7 @@ def build_tools(p: Platform) -> dict[str, Tool]:
     s = p.store
 
     def list_incidents(status: str = "open"):
-        return s.rows("SELECT id, title, kind, confidence, status, impact FROM incidents WHERE status=? ORDER BY id DESC LIMIT 20",
+        return s.rows("SELECT id, title, kind, confidence, status, root_device, impact FROM incidents WHERE status=? ORDER BY id DESC LIMIT 20",
                       (status,))
 
     def get_incident(incident_id: int):
@@ -224,10 +225,19 @@ class Agent:
         return Answer("I could not reach a conclusion within the step limit.", steps)
 
     def offline(self, question: str) -> Answer:
+        # Without a model, intent is read from explicit references: an
+        # incident number wins, then a device name; otherwise the newest.
+        m = re.search(r"(?:#|incident\s*)(\d+)", question, re.I)
+        if m and self.p.store.row("SELECT 1 FROM incidents WHERE id=?", (int(m.group(1)),)):
+            return explain_incident(self, int(m.group(1)))
         incidents = self.call("list_incidents", {})
         if not incidents:
             return Answer("No open incidents. The network looks healthy from the poller's point of view.",
                           [Step("list_incidents", {}, incidents)], mode="offline")
+        for inc in incidents:
+            devices = {inc["root_device"], *filter(None, (inc["impact"] or "").split(","))}
+            if any(re.search(rf"\b{re.escape(d)}\b", question) for d in devices):
+                return explain_incident(self, inc["id"])
         return explain_incident(self, incidents[0]["id"])
 
 

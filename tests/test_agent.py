@@ -82,3 +82,16 @@ def test_llm_loop_against_fake_openai_server(platform):
     tool_props = turns[0]["tools"][0]["function"]["parameters"]["properties"]
     assert all("optional" not in v for v in tool_props.values())
     assert platform.store.row("SELECT actor FROM audit WHERE action='tool.list_incidents'")["actor"] == "agent"
+
+
+def test_offline_answers_the_incident_that_was_asked_about(platform):
+    platform.lab.power("dist-01", False)
+    platform.lab.corrupt_port("acc-03", "GE0/0/3", 30)
+    for _ in range(3):
+        platform.cycle()
+    a = Agent(platform)
+    first = platform.store.row("SELECT id FROM incidents WHERE title='dist-01 is down'")["id"]
+    assert "dist-01 is down" in a.ask(f"Explain incident #{first}").text
+    assert "Errors on acc-03" in a.ask("why is acc-03 slow?").text
+    assert "dist-01 is down" in a.ask("what about dist-01?").text   # not just "newest"
+    assert "dist-01 is down" in a.ask("is acc-01 ok?").text   # impact names the isolated switch
