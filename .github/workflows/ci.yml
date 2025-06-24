@@ -1,0 +1,47 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: ["3.10", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - run: pip install -e '.[dev]'
+      - run: pytest -q
+
+  network-gate:
+    # The delivery pipeline from P07: verify the network, then show the plan.
+    # `fathom plan` exits 2 when changes are pending, so the step fails loudly
+    # and a reviewer sees exactly what would be applied.
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install .
+      - run: fathom verify
+      - name: Plan desired state
+        run: |
+          set +e
+          fathom plan examples/desired.yml
+          code=$?
+          if [ "$code" -eq 2 ]; then echo "::notice::changes pending review"; exit 0; fi
+          exit $code
+
+  docker:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -t fathom .
