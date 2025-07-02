@@ -1,5 +1,11 @@
 # Fathom
 
+[![CI](https://github.com/Jamie-233/fathom/actions/workflows/ci.yml/badge.svg)](https://github.com/Jamie-233/fathom/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-blue.svg?logo=python&logoColor=white)](pyproject.toml)
+[![Docker](https://img.shields.io/badge/Docker-2496ED.svg?logo=docker&logoColor=white)](Dockerfile)
+[![Stars](https://img.shields.io/github/stars/Jamie-233/fathom.svg?style=flat&color=yellow)](https://github.com/Jamie-233/fathom/stargazers)
+
 **An AIOps platform for networks.** Fathom polls switches, turns vendor CLI output into data, groups alerts into incidents by topology-aware root cause, fixes what is safe to fix automatically, puts everything else behind human approval, delivers configuration as reviewed plans, and lets an AI agent investigate incidents with read-only tools.
 
 It ships with a simulated multi-vendor campus network (Cisco IOS and Huawei VRP) and fault injection, so the whole loop runs on a laptop with no hardware.
