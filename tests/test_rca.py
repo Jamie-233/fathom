@@ -68,3 +68,23 @@ def test_incident_survives_restart_of_the_manager(env):
     run(env)
     run(env)  # new RuleEngine/IncidentManager instances, same store
     assert env.store.row("SELECT COUNT(*) n FROM incidents")["n"] == 1
+
+
+def test_one_sided_lldp_still_yields_an_undirected_graph(env):
+    # The lab records every link from both ends. Delete one direction: the
+    # reverse edge must be synthesized, or a half-discovered link silently
+    # vanishes from path search and device_dead().
+    from fathom.ai.rca import Topology
+
+    env.store.execute("DELETE FROM links WHERE a='dist-01' AND b='acc-01'")
+    topo = Topology(env.store)
+    assert ("Gi1/0/1", "acc-01", "Gi1/0/48") in topo.adj["dist-01"]
+    assert ("Gi1/0/48", "dist-01", "Gi1/0/1") in topo.adj["acc-01"]
+
+
+def test_half_discovered_link_still_resolves_to_a_link_finding(env):
+    env.store.execute("DELETE FROM links WHERE a='dist-01' AND b='acc-01'")
+    env.lab.power("acc-01", False)
+    run(env)
+    [f] = analyze(env.store)
+    assert f.kind == "link" and f.confidence == "medium"

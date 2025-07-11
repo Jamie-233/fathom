@@ -50,12 +50,29 @@ class Topology:
     def __init__(self, store: Store):
         self.adj: dict[str, list[tuple[str, str, str]]] = {}
         for l in store.rows("SELECT a, a_if, b, b_if FROM links"):
-            self.adj.setdefault(l["a"], []).append((l["a_if"], l["b"], l["b_if"]))
+            self._add(l["a"], l["a_if"], l["b"], l["b_if"])
+            self._add(l["b"], l["b_if"], l["a"], l["a_if"])
         devices = store.rows("SELECT name, role, reachable FROM devices")
         self.reachable = {d["name"]: bool(d["reachable"]) for d in devices}
         self.anchors = [d["name"] for d in devices if d["role"] == "core" and d["reachable"]]
         self.iface_up = {(r["device"], r["name"]): bool(r["oper_up"])
                          for r in store.rows("SELECT device, name, oper_up FROM interfaces")}
+
+    def _add(self, src: str, src_if: str, dst: str, dst_if: str) -> None:
+        """Record one direction of a link, once.
+
+        LLDP normally reports from both ends, so the reverse entry is usually
+        already in the table and this is a no-op. When only one end answers —
+        a device that was dark during discovery, a link that only ever
+        reported one way — the synthesized reverse entry is what keeps the
+        graph usable. Relying on symmetry silently lost those links, and with
+        them the path search and the "is every neighbour down?" check.
+        """
+        bucket = self.adj.setdefault(src, [])
+        for iface, nb, _ in bucket:
+            if iface == src_if and nb == dst:
+                return
+        bucket.append((src_if, dst, dst_if))
 
     def link_down(self, a: str, a_if: str, b: str, b_if: str) -> bool | None:
         """Down if any *visible* end says so; unknown if neither end is visible."""
