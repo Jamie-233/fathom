@@ -25,7 +25,7 @@ def test_html_rendering_escapes_and_builds_tables():
 def test_report_and_backup_endpoints():
     p = Platform(seed=12)
     p.cycle()
-    c = TestClient(create_app(p, token=""))
+    c = TestClient(create_app(p, token="", allow_anonymous_writes=True))
     assert c.get("/api/report", params={"format": "html"}).text.startswith("<!doctype html>")
     assert set(c.post("/api/backups").json().values()) == {"initial"}
     p.lab.configure("acc-01", ["interface Gi1/0/2", "shutdown"])

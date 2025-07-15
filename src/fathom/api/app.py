@@ -67,16 +67,30 @@ class AskIn(BaseModel):
 
 
 def create_app(platform: Platform | None = None, token: str | None = None,
-               netbox_secret: str | None = None) -> FastAPI:
+               netbox_secret: str | None = None,
+               allow_anonymous_writes: bool | None = None) -> FastAPI:
     p = platform or Platform()
     s = p.store
     token = token if token is not None else os.environ.get("FATHOM_TOKEN", "")
+    if allow_anonymous_writes is None:
+        allow_anonymous_writes = os.environ.get("FATHOM_ALLOW_ANONYMOUS_WRITES") == "1"
     agent = Agent(p)
     plans: dict[str, tuple[float, iac.Plan]] = {}
     app = FastAPI(title="Fathom", version="0.1.0", description="AIOps platform for networks")
 
     def writer(authorization: str = Header(default=""), x_fathom_user: str = Header(default="")) -> Actor:
-        if token and not secrets.compare_digest(authorization, f"Bearer {token}"):
+        if not token:
+            # Fail closed. "No token configured" used to mean "no auth", which
+            # turns every write endpoint into an open door the moment the
+            # portal is bound to anything but localhost.
+            if not allow_anonymous_writes:
+                raise HTTPException(
+                    503,
+                    "FATHOM_TOKEN is not set, so writes are disabled. Set FATHOM_TOKEN, "
+                    "or FATHOM_ALLOW_ANONYMOUS_WRITES=1 for a local-only lab.",
+                )
+            return Actor(name=x_fathom_user.strip() or "anonymous")
+        if not secrets.compare_digest(authorization, f"Bearer {token}"):
             raise HTTPException(401, "missing or invalid token")
         return Actor(name=x_fathom_user.strip() or "anonymous")
 

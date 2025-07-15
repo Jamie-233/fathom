@@ -87,3 +87,15 @@ def test_metrics_and_portal(client):
 
 def test_verify_endpoint(client):
     assert all(c["passed"] for c in client.get("/api/verify").json())
+
+
+def test_writes_fail_closed_when_no_token_is_configured():
+    # An unset token must not silently mean "no auth": binding the portal to a
+    # public interface would then expose every write endpoint.
+    p = Platform(seed=6)
+    p.cycle()
+    closed = TestClient(create_app(p, token=""))
+    assert closed.post("/api/lab/heal").status_code == 503
+    assert "FATHOM_TOKEN" in closed.post("/api/lab/heal").json()["detail"]
+    opened = TestClient(create_app(p, token="", allow_anonymous_writes=True))
+    assert opened.post("/api/lab/heal").status_code == 200

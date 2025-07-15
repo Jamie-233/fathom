@@ -12,6 +12,7 @@ from __future__ import annotations
 import argparse
 import json
 import logging
+import os
 import sys
 
 from fathom import __version__
@@ -35,8 +36,14 @@ def cmd_serve(args) -> int:
             (args.webhook or [])
     p = Platform(db=args.db, webhooks=hooks, seed=args.seed, sim_seconds=args.sim_seconds)
     p.start(interval=args.interval)
+    # The lab is a demo: keep writes usable when it is only reachable from
+    # this machine, and fail closed (503) the moment it is bound wider.
+    local_only = args.host in ("127.0.0.1", "localhost", "::1")
+    if not os.environ.get("FATHOM_TOKEN") and not local_only:
+        print("warning: FATHOM_TOKEN is not set; write endpoints will answer 503", file=sys.stderr)
+    app = create_app(p, allow_anonymous_writes=local_only)
     try:
-        uvicorn.run(create_app(p), host=args.host, port=args.port, log_level="warning")
+        uvicorn.run(app, host=args.host, port=args.port, log_level="warning")
     finally:
         p.stop()
     return 0
