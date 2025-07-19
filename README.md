@@ -43,20 +43,21 @@ fathom report --html > report.html
 
 With Docker: `docker build -t fathom . && docker run -p 8000:8000 -v fathom:/data fathom`
 
-## Course map
+## Package map
 
-The project follows the eight parts of the *AIOps Vibe Coding* curriculum. Each part is a package; each lesson's core idea is implemented, tested, and connected to the rest.
+Each package owns one layer of the loop, so a change in one does not leak into
+another. If you only read one file per layer, these are the ones to start with.
 
-| Part | Lessons | Where | What it does |
-|---|---|---|---|
-| **P01** AI coding & Python | L01–L04 | `data/parsers.py` | Regex parsing of `show interfaces` / `display interface brief`, canonical interface names, structured records |
-| **P02** Data & device config | L05–L08 | `data/store.py`, `config/`, `devices/transport.py` | SQLite inventory and telemetry; Jinja2 templates per vendor; config backup with change detection, diff and restore; Netmiko SSH transport |
-| **P03** APIs & integration | L09–L11 | `api/app.py`, `api/webhooks.py` | FastAPI + Pydantic REST API with token auth; signed, idempotent, loop-safe NetBox webhook that drives device changes |
-| **P04** Observability & testing | L12–L17 | `observe/` | Counter-wrap/reset-safe rates, syslog events, alert rules with pending periods, Prometheus `/metrics`, Alertmanager-format notifications, pre/post-change snapshot verification |
-| **P05** Device-side automation | L18 | `ops/remediation.py` | Event-driven runbooks — the off-box equivalent of EEM applets — with attempt budgets |
-| **P06** Portal & task automation | L19–L21 | `ops/static/`, `ops/report.py` | Web portal (topology, incidents, approvals, changes, lab); inspection report in Markdown/HTML |
-| **P07** IaC & continuous delivery | L22–L24 | `delivery/iac.py`, `.github/workflows/` | Declarative desired state, minimal plan, stale-plan protection, apply-then-verify; CI with a network verification gate |
-| **P08** LLMs, agents & AIOps | L25–L30 | `ai/` | Topology-aware RCA; BM25 runbook knowledge base (CJK-aware); function-calling agent with read-only tools; MCP server for Cursor/Claude |
+| Package | What it does |
+|---|---|
+| `data/parsers.py` | Regex parsing of `show interfaces` / `display interface brief`, canonical interface names, structured records |
+| `data/store.py`, `config/`, `devices/transport.py` | SQLite inventory and telemetry; Jinja2 templates per vendor; config backup with change detection, diff and restore; Netmiko SSH transport |
+| `api/` | FastAPI + Pydantic REST API with token auth; signed, idempotent, loop-safe NetBox webhook that drives device changes |
+| `observe/` | Counter-wrap/reset-safe rates, syslog events, alert rules with pending periods, Prometheus `/metrics`, Alertmanager-format notifications, pre/post-change snapshot verification |
+| `ops/remediation.py` | Event-driven runbooks — the off-box equivalent of EEM applets — with attempt budgets |
+| `ops/static/`, `ops/report.py` | Web portal (topology, incidents, approvals, changes, lab); inspection report in Markdown/HTML |
+| `delivery/iac.py`, `.github/workflows/` | Declarative desired state, minimal plan, stale-plan protection, apply-then-verify; CI with a network verification gate |
+| `ai/` | Topology-aware RCA; BM25 runbook knowledge base (CJK-aware); function-calling agent with read-only tools; MCP server for Cursor/Claude |
 
 Out of scope by design: anything that needs real infrastructure or heavy external systems — SNMP/gNMI against hardware, Elastic, NetFlow, on-box GuestShell/ZTP, NSO, and model fine-tuning. The transport boundary is where SNMP or gNMI collectors would plug in.
 

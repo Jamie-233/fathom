@@ -39,8 +39,11 @@ def cmd_serve(args) -> int:
     # The lab is a demo: keep writes usable when it is only reachable from
     # this machine, and fail closed (503) the moment it is bound wider.
     local_only = args.host in ("127.0.0.1", "localhost", "::1")
-    if not os.environ.get("FATHOM_TOKEN") and not local_only:
-        print("warning: FATHOM_TOKEN is not set; write endpoints will answer 503", file=sys.stderr)
+    if not os.environ.get("FATHOM_TOKEN"):
+        if not local_only:
+            print("warning: FATHOM_TOKEN is not set; write endpoints will answer 503", file=sys.stderr)
+        else:
+            print("note: FATHOM_TOKEN is not set; writes are accepted from localhost only", file=sys.stderr)
     app = create_app(p, allow_anonymous_writes=local_only)
     try:
         uvicorn.run(app, host=args.host, port=args.port, log_level="warning")

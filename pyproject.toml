@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "fathom"
-version = "0.1.0"
+version = "0.2.0"
 description = "An AIOps platform for networks: inventory, telemetry, topology-aware root cause analysis, event-driven remediation, declarative config and an LLM agent — with a built-in simulated network."
 readme = "README.md"
 requires-python = ">=3.10"
