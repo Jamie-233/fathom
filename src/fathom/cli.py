@@ -34,7 +34,11 @@ def cmd_serve(args) -> int:
 
     hooks = [{"url": u, "format": "alertmanager"} for u in args.alertmanager_webhook or []] + \
             (args.webhook or [])
-    p = Platform(db=args.db, webhooks=hooks, seed=args.seed, sim_seconds=args.sim_seconds)
+    from fathom.devices.lab import DEFAULT_TOPOLOGY
+
+    p = Platform(db=args.db, topology=args.topology or DEFAULT_TOPOLOGY,
+                 webhooks=hooks, seed=args.seed,
+                 sim_seconds=args.sim_seconds, transport=args.transport)
     p.start(interval=args.interval)
     # The lab is a demo: keep writes usable when it is only reachable from
     # this machine, and fail closed (503) the moment it is bound wider.
@@ -119,6 +123,9 @@ def main(argv: list[str] | None = None) -> None:
 
     s = sub.add_parser("serve", help="run the platform, API and portal")
     s.add_argument("--host", default="127.0.0.1")
+    s.add_argument("--transport", choices=["lab", "ssh"], default="lab",
+                   help="lab keeps the simulator; ssh polls the devices in --topology")
+    s.add_argument("--topology", default=None, help="device list (defaults to the bundled lab)")
     s.add_argument("--port", type=int, default=8000)
     s.add_argument("--db", default="fathom.db")
     s.add_argument("--interval", type=float, default=2.0, help="real seconds between cycles")

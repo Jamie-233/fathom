@@ -43,6 +43,26 @@ fathom report --html > report.html
 
 With Docker: `docker build -t fathom . && docker run -p 8000:8000 -v fathom:/data fathom`
 
+## Real devices
+
+Every consumer reaches devices through one narrow transport interface, so the
+same code runs against the simulator or against switches over SSH.
+
+```bash
+export FATHOM_SSH_USER=netops FATHOM_SSH_PASSWORD=...
+fathom serve --transport ssh --topology my-site.yml
+```
+
+`my-site.yml` has the same shape as the bundled lab: `devices:` entries with
+`name`, `vendor` (`cisco_ios` or `huawei_vrp`) and `mgmt`. Collection only
+issues `show` / `display` commands; configuration is reachable exclusively
+through plan → diff → apply → verify.
+
+Be precise about what has been verified: the SSH path is covered by tests that
+replace Netmiko with a fake, so command dispatch, vendor mapping, reconnect
+after a dropped session and the syslog queue are exercised. It has **not** been
+run against a physical switch yet. That is the next milestone, not a claim.
+
 ## Package map
 
 Each package owns one layer of the loop, so a change in one does not leak into

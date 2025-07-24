@@ -4,6 +4,18 @@ Notable changes to this project. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2026-11-12
+
+### Added
+
+- The SSH transport is wired to the platform: `--transport ssh` reads the
+  device list from the topology file, and `FATHOM_SSH_USER` /
+  `FATHOM_SSH_PASSWORD` supply credentials. Missing credentials and a refused
+  connection now fail with a message instead of a traceback.
+- Tests replace Netmiko with a fake, covering command dispatch, vendor
+  mapping, session reuse, reconnect after a dropped session, timeouts, the
+  syslog queue and the transport factory.
+
 ## [0.2.0] - 2026-11-12
 
 ### Fixed

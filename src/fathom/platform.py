@@ -23,7 +23,7 @@ from fathom.observe.collector import Collector
 from fathom.observe.metrics import alertmanager_payload
 from fathom.ai.knowledge import KnowledgeBase
 from fathom.devices.lab import DEFAULT_TOPOLOGY, Lab
-from fathom.devices.transport import LabTransport
+from fathom.devices.transport import Transport, build_transport
 from fathom.ai.rca import IncidentManager
 from fathom.ops.remediation import Remediator
 from fathom.observe.rules import RuleEngine
@@ -34,10 +34,14 @@ log = logging.getLogger("fathom")
 
 class Platform:
     def __init__(self, db: str = ":memory:", topology: str | Path = DEFAULT_TOPOLOGY,
-                 webhooks: list[str | dict] | None = None, seed: int | None = 7, sim_seconds: float = 30.0):
+                 webhooks: list[str | dict] | None = None, seed: int | None = 7, sim_seconds: float = 30.0,
+                 transport: str | Transport = "lab"):
         self.lab = Lab(topology, seed=seed)
         self.store = Store(db)
-        self.transport = LabTransport(self.lab)
+        # "lab" keeps demos and tests hermetic; "ssh" talks to the devices in
+        # the topology file. Everything downstream only knows the Protocol.
+        self.transport = (build_transport(transport, self.lab, topology)
+                          if isinstance(transport, str) else transport)
         self.sim_seconds = sim_seconds
         # The poller runs on the lab's clock so simulated time and measured
         # rates agree even when the lab is fast-forwarded.
