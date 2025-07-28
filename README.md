@@ -12,6 +12,16 @@ It ships with a simulated multi-vendor campus network (Cisco IOS and Huawei VRP)
 
 ![Overview: topology, incidents and device logs](docs/overview.png)
 
+## Where it fits
+
+Fathom is a platform-sized study of network operations with a simulator built in, not a drop-in replacement for production tooling. What it is meant to show:
+
+- **Alerts grouped by cause in the topology, not by labels.** Label-based grouping joins alerts that happen to share a tag; Fathom joins alerts that share a root in the network graph, so a dead switch and the four alerts behind it become one incident.
+- **A model that cannot change the network.** Root-cause analysis, approvals and verification are deterministic code. The LLM only reads through allow-listed tools and can propose a change that a different human must approve. Without a model configured, everything still works. Asking a model "what is broken?" with no tools gives it nothing to base an answer on; here every claim can be traced to data the platform collected.
+- **Stated uncertainty.** A dead switch and a cut cable look identical from the poller. The incident says so, at medium confidence, instead of guessing.
+
+Not covered: SNMP/gNMI at scale, flow data, multiple sites or pollers, and any vendor behaviour outside the table below.
+
 ## The loop
 
 ```
@@ -58,10 +68,18 @@ fathom serve --transport ssh --topology my-site.yml
 issues `show` / `display` commands; configuration is reachable exclusively
 through plan → diff → apply → verify.
 
-Be precise about what has been verified: the SSH path is covered by tests that
-replace Netmiko with a fake, so command dispatch, vendor mapping, reconnect
-after a dropped session and the syslog queue are exercised. It has **not** been
-run against a physical switch yet. That is the next milestone, not a claim.
+## What has been verified
+
+| Capability | Simulated lab | Real SSH session | Output from real vendor software | Physical device |
+|---|---|---|---|---|
+| Transport: login, command dispatch, vendor mapping, reconnect | n/a | not yet (tests use a fake Netmiko) | n/a | not yet |
+| IOS / VRP output parsing | yes, on text the lab's own renderer produces | n/a | not yet | not yet |
+| LLDP topology discovery | yes | not yet | not yet | not yet |
+| Topology-aware root cause analysis | yes: 4,400 randomised trials, see [docs/benchmark.md](docs/benchmark.md) | n/a | n/a | not yet |
+| Remediation, four-eyes approval, read-back verification | yes | not yet | not yet | not yet |
+| Plan / apply of desired state | yes | not yet | not yet | not yet |
+
+"Simulated lab" means the simulator and the parsers were written by the same author, so passing there shows internal consistency, not correctness against real equipment. Connecting to a physical switch is the next milestone, not a claim.
 
 ## Package map
 
@@ -91,6 +109,8 @@ Every firing alert is attributed to a single root by walking the shortest path f
 - **Link or single-homed device** — one cut link isolates a device with no other path. From the outside a dead switch and a cut cable look identical, so Fathom says exactly that, with medium confidence, instead of guessing.
 - **Redundancy lost** — a link failed but nothing became unreachable. Its own incident; both ends' alerts are merged into it.
 - **Local** — errors, CPU and congestion have no topological relationship and are their own root.
+
+**Measured, with caveats.** [`benchmarks/rca_bench.py`](benchmarks/rca_bench.py) injects power loss, link cuts, CPU, CRC and BPDU-guard faults (alone and in pairs) into the bundled lab and into randomly generated campuses, with and without lost polls, and compares the open incidents with the lab's own ground truth. Without poll loss every injected fault was located; with 2% of polls lost, 98.9%. It also found three weaknesses (a switch with all uplinks cut is reported dead at high confidence; a single lost poll opens a false incident; a lost poll erases a real local alert for a few cycles), which are written up in [docs/benchmark.md](docs/benchmark.md) rather than hidden. It is a simulation, so read it as a consistency check and a bug finder, not as accuracy on real networks.
 
 ## Safe automation
 
@@ -172,6 +192,7 @@ src/fathom/
 ```bash
 pip install -e '.[dev]'
 pytest
+python benchmarks/rca_bench.py --trials 100 --out docs/benchmark.md   # about 4 minutes
 ```
 
 The test suite drives faults through the simulated lab and asserts on outcomes end to end: parsing both vendors, counter wrap and reset, pending periods, RCA for device/link/redundancy failures, approval and escalation, plan/apply/drift, webhook signatures and loops, MCP framing, and the agent loop against a fake OpenAI-compatible server.
